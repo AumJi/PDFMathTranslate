@@ -1,5 +1,6 @@
 import concurrent.futures
 import logging
+import os
 import re
 import unicodedata
 from enum import Enum
@@ -376,9 +377,16 @@ class TranslateConverter(PDFConverterEx):
         # 根据目标语言获取默认行距
         LANG_LINEHEIGHT_MAP = {
             "zh-cn": 1.4, "zh-tw": 1.4, "zh-hans": 1.4, "zh-hant": 1.4, "zh": 1.4,
-            "ja": 1.1, "ko": 1.2, "en": 1.2, "ar": 1.0, "ru": 0.8, "uk": 0.8, "ta": 0.8
+            "ja": 1.1, "ko": 1.2, "en": 1.2, "ar": 1.0, "ru": 0.8, "uk": 0.8,
+            "ta": 0.8, "th": 1.25
         }
-        default_line_height = LANG_LINEHEIGHT_MAP.get(self.translator.lang_out.lower(), 1.1) # 小语种默认1.1
+        default_line_height = float(
+            os.environ.get(
+                "PDF2ZH_LINE_HEIGHT",
+                LANG_LINEHEIGHT_MAP.get(self.translator.lang_out.lower(), 1.1),
+            )
+        ) # 小语种默认1.1
+        font_scale = float(os.environ.get("PDF2ZH_FONT_SCALE", "1.0"))
         _x, _y = 0, 0
         ops_list = []
 
@@ -394,7 +402,7 @@ class TranslateConverter(PDFConverterEx):
             x0: float = pstk[id].x0                     # 段落左边界
             x1: float = pstk[id].x1                     # 段落右边界
             height: float = pstk[id].y1 - pstk[id].y0   # 段落高度
-            size: float = pstk[id].size                 # 段落字体大小
+            size: float = pstk[id].size * font_scale    # 段落字体大小
             brk: bool = pstk[id].brk                    # 段落换行标记
             cstk: str = ""                              # 当前文字栈
             fcur: str = None                            # 当前字体 ID

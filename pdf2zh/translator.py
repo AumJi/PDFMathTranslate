@@ -14,12 +14,6 @@ import requests
 import xinference_client
 from azure.ai.translation.text import TextTranslationClient
 from azure.core.credentials import AzureKeyCredential
-from tencentcloud.common import credential
-from tencentcloud.tmt.v20180321.models import (
-    TextTranslateRequest,
-    TextTranslateResponse,
-)
-from tencentcloud.tmt.v20180321.tmt_client import TmtClient
 
 from pdf2zh.cache import TranslationCache
 from pdf2zh.config import ConfigManager
@@ -763,8 +757,12 @@ class TencentTranslator(BaseTranslator):
     def __init__(
         self, lang_in, lang_out, model, envs=None, ignore_cache=False, **kwargs
     ):
+        from tencentcloud.common import credential
+        from tencentcloud.tmt.v20180321.models import TextTranslateRequest
+        from tencentcloud.tmt.v20180321.tmt_client import TmtClient
+
         self.set_envs(envs)
-        super().__init__(lang_in, lang_out, model)
+        super().__init__(lang_in, lang_out, model, ignore_cache)
         try:
             cred = credential.DefaultCredentialProvider().get_credential()
         except EnvironmentError:
@@ -783,7 +781,7 @@ class TencentTranslator(BaseTranslator):
 
     def _translate_chunk(self, text):
         self.req.SourceText = text
-        resp: TextTranslateResponse = self.client.TextTranslate(self.req)
+        resp = self.client.TextTranslate(self.req)
         return resp.TargetText
 
     def do_translate(self, text):
@@ -1064,6 +1062,10 @@ class OpenAIlikedTranslator(OpenAITranslator):
         "OPENAILIKED_STREAM": "false",  # Configurable: set to "true" or "false"
         "OPENAILIKED_STOP_TOKENS": "",  # Space separated list of stop tokens
         "OPENAILIKED_MAX_TOKENS": -1,  # Specify -1 to call the API without setting max_tokens
+        "OPENAILIKED_MAX_COMPLETION_TOKENS": -1,
+        "OPENAILIKED_TEMPERATURE": None,
+        "OPENAILIKED_TOP_P": None,
+        "OPENAILIKED_FREQUENCY_PENALTY": None,
     }
     CustomPrompt = True
 
@@ -1095,6 +1097,20 @@ class OpenAIlikedTranslator(OpenAITranslator):
             stop_tokens=self.envs.get("OPENAILIKED_STOP_TOKENS", "").split(),
             max_tokens=int(self.envs.get("OPENAILIKED_MAX_TOKENS", -1)),
         )
+        max_completion_tokens = int(
+            self.envs.get("OPENAILIKED_MAX_COMPLETION_TOKENS", -1)
+        )
+        if max_completion_tokens > 0:
+            self.options.pop("max_tokens", None)
+            self.options["max_completion_tokens"] = max_completion_tokens
+        if self.envs.get("OPENAILIKED_TEMPERATURE") is not None:
+            self.options["temperature"] = float(self.envs["OPENAILIKED_TEMPERATURE"])
+        if self.envs.get("OPENAILIKED_TOP_P") is not None:
+            self.options["top_p"] = float(self.envs["OPENAILIKED_TOP_P"])
+        if self.envs.get("OPENAILIKED_FREQUENCY_PENALTY") is not None:
+            self.options["frequency_penalty"] = float(
+                self.envs["OPENAILIKED_FREQUENCY_PENALTY"]
+            )
         # Parse stream option from config (default to False for compatibility)
         stream_val = self.envs.get("OPENAILIKED_STREAM", "false").lower()
         self.stream = stream_val == "true"

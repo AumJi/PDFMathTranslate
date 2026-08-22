@@ -58,6 +58,8 @@ class LegacyKernel:
             "skip_subset_fonts": request.skip_subset_fonts,
             "ignore_cache": request.ignore_cache,
             "compatible": request.compatible,
+            "no_dual": request.no_dual,
+            "no_mono": request.no_mono,
         }
 
         if request.pages and isinstance(request.pages, list):
@@ -74,8 +76,8 @@ class LegacyKernel:
         for mono_path, dual_path in result_files:
             results.append(
                 TranslateResult(
-                    mono_pdf=Path(mono_path),
-                    dual_pdf=Path(dual_path),
+                    mono_pdf=Path(mono_path) if mono_path else None,
+                    dual_pdf=Path(dual_path) if dual_path else None,
                 )
             )
         return results

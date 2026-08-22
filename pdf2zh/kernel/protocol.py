@@ -27,6 +27,8 @@ class TranslateRequest:
     skip_subset_fonts: bool = False
     ignore_cache: bool = False
     compatible: bool = False
+    no_dual: bool = False
+    no_mono: bool = False
 
 
 @dataclass

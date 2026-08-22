@@ -184,6 +184,8 @@ def translate_stream(
     prompt: Template = None,
     skip_subset_fonts: bool = False,
     ignore_cache: bool = False,
+    no_dual: bool = False,
+    no_mono: bool = False,
     **kwarg: Any,
 ):
     font_list = [("tiro", None)]
@@ -240,15 +242,18 @@ def translate_stream(
         # print(ops_new.encode())
         doc_zh.update_stream(obj_id, ops_new.encode())
 
-    doc_en.insert_file(doc_zh)
-    for id in range(page_count):
-        doc_en.move_page(page_count + id, id * 2 + 1)
+    if not no_dual:
+        doc_en.insert_file(doc_zh)
+        for id in range(page_count):
+            doc_en.move_page(page_count + id, id * 2 + 1)
     if not skip_subset_fonts:
-        doc_zh.subset_fonts(fallback=True)
-        doc_en.subset_fonts(fallback=True)
+        if not no_mono:
+            doc_zh.subset_fonts(fallback=True)
+        if not no_dual:
+            doc_en.subset_fonts(fallback=True)
     return (
-        doc_zh.write(deflate=True, garbage=3, use_objstms=1),
-        doc_en.write(deflate=True, garbage=3, use_objstms=1),
+        None if no_mono else doc_zh.write(deflate=True, garbage=3, use_objstms=1),
+        None if no_dual else doc_en.write(deflate=True, garbage=3, use_objstms=1),
     )
 
 
@@ -319,6 +324,8 @@ def translate(
     prompt: Template = None,
     skip_subset_fonts: bool = False,
     ignore_cache: bool = False,
+    no_dual: bool = False,
+    no_mono: bool = False,
     **kwarg: Any,
 ):
     if not files:
@@ -396,13 +403,17 @@ def translate(
         )
         file_mono = Path(output) / f"{filename}-mono.pdf"
         file_dual = Path(output) / f"{filename}-dual.pdf"
-        doc_mono = open(file_mono, "wb")
-        doc_dual = open(file_dual, "wb")
-        doc_mono.write(s_mono)
-        doc_dual.write(s_dual)
-        doc_mono.close()
-        doc_dual.close()
-        result_files.append((str(file_mono), str(file_dual)))
+        mono_path = None
+        dual_path = None
+        if s_mono is not None:
+            with open(file_mono, "wb") as doc_mono:
+                doc_mono.write(s_mono)
+            mono_path = str(file_mono)
+        if s_dual is not None:
+            with open(file_dual, "wb") as doc_dual:
+                doc_dual.write(s_dual)
+            dual_path = str(file_dual)
+        result_files.append((mono_path, dual_path))
 
     return result_files
 
