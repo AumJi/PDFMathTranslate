@@ -187,6 +187,18 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     parse_params.add_argument(
+        "--no-dual",
+        action="store_true",
+        help="Do not generate bilingual dual PDF output.",
+    )
+
+    parse_params.add_argument(
+        "--no-mono",
+        action="store_true",
+        help="Do not generate translated mono PDF output.",
+    )
+
+    parse_params.add_argument(
         "--skip-subset-fonts",
         action="store_true",
         help="Skip font subsetting. "
@@ -213,6 +225,9 @@ def create_parser() -> argparse.ArgumentParser:
 
 def parse_args(args: Optional[List[str]]) -> argparse.Namespace:
     parsed_args = create_parser().parse_args(args=args)
+
+    if parsed_args.no_dual and parsed_args.no_mono:
+        raise ValueError("At least one output is required; do not set both --no-dual and --no-mono.")
 
     if parsed_args.pages:
         pages = []
@@ -371,6 +386,8 @@ def main(args: Optional[List[str]] = None) -> int:
         ignore_cache=parsed_args.ignore_cache,
         compatible=parsed_args.compatible,
         debug=parsed_args.debug,
+        no_dual=parsed_args.no_dual,
+        no_mono=parsed_args.no_mono,
     )
     kernel.translate(request)
     return 0
@@ -494,8 +511,8 @@ def yadt_main(parsed_args) -> int:
             debug=parsed_args.debug,
             lang_in=lang_in,
             lang_out=lang_out,
-            no_dual=False,
-            no_mono=False,
+            no_dual=parsed_args.no_dual,
+            no_mono=parsed_args.no_mono,
             qps=parsed_args.thread,
         )
 
